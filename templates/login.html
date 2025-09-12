@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login - Smart Attendance</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="d-flex align-items-center justify-content-center vh-100 bg-light">
+    <div class="card shadow-lg p-4" style="width: 400px;">
+        <h3 class="text-center text-primary mb-3">Smart Attendance</h3>
+        <p class="text-center text-muted mb-4">Login to continue</p>
+
+        <form method="POST" action="{{ url_for('login') }}">
+            <input type="text" name="username" class="form-control mb-3" placeholder="Username" required>
+            <input type="password" name="password" class="form-control mb-3" placeholder="Password" required>
+            <button class="btn btn-primary w-100 mb-3">Login</button>
+        </form>
+
+        <hr>
+
+        <button class="btn btn-outline-danger w-100" id="google-signin">Sign in with Google</button>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAPn3WNm3Jc0Gmqdg2dOta_UAqRwWh237E",
+            authDomain: "smart-attendance-4e71f.firebaseapp.com",
+            projectId: "smart-attendance-4e71f",
+            storageBucket: "smart-attendance-4e71f.appspot.com",
+            messagingSenderId: "451134242108",
+            appId: "1:451134242108:web:cf9b668dc774dba171f239"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        document.getElementById("google-signin").onclick = async () => {
+            try {
+                const provider = new GoogleAuthProvider();
+                const result = await signInWithPopup(auth, provider);
+                const token = await result.user.getIdToken();
+
+                const res = await fetch("/google_login", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ token })
+                });
+
+                const data = await res.json();
+                if (data.success) window.location.href = data.redirect;
+                else alert(data.msg);
+
+            } catch (err) {
+                console.error(err);
+                alert("Google Sign-In failed: " + err.message);
+            }
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+
+Flask==2.3.3
+Flask-SQLAlchemy==3.0.5
+pyjwt==2.8.0
+qrcode[pil]==8.2
+firebase-admin==6.2.0
+requests==2.32.0
