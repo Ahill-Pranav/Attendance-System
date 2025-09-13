@@ -1,92 +1,118 @@
+<!-- templates/faculty.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Faculty Dashboard</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  <meta charset="utf-8" />
+  <title>Faculty Dashboard</title>
+  <link rel="stylesheet" href="/static/css/style.css">
 </head>
-<body class="bg-light">
-<div class="container py-5">
-    <h2 class="text-primary">Faculty Dashboard</h2>
-    <p class="text-muted">Manage attendance and track student participation</p>
+<body>
+  <div class="dashboard-card">
+    <h1>Faculty Dashboard</h1>
 
-    <!-- Generate QR -->
-    <div class="card shadow-sm p-4 mb-4">
-        <h5>Generate Attendance QR</h5>
-        <div class="mt-3" id="qrContainer"></div>
-        <p id="qrCountdown" class="text-muted mt-2"></p>
+    <h2>Generate QR (auto regenerate up to 5 times)</h2>
+    <div class="qr-box">
+      <img id="qr" src="" alt="QR Code" width="200" height="200">
+      <div id="countdown">10</div>
+      <div style="margin-top:8px;">
+        <button id="forceGen" class="btn btn-primary">Regenerate Now</button>
+        <button id="exportCsv" class="btn" style="background:#06b6d4; color:#fff; margin-left:8px;">Export CSV</button>
+      </div>
     </div>
 
-    <!-- Attendance List -->
-    <div class="card shadow-sm p-4">
-        <h5>Attendance List</h5>
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>Roll No</th>
-                    <th>Name</th>
-                    <th>Timestamp</th>
-                </tr>
-            </thead>
-            <tbody id="attendanceTable"></tbody>
-        </table>
+    <h2>Select Date</h2>
+    <div class="form-inline">
+      <input type="date" id="attendance_date" max="{{ today }}">
+      <button onclick="loadAttendance()" class="btn btn-primary">Load Attendance</button>
     </div>
-</div>
+
+    <h2>Attendance by Hour</h2>
+    <table>
+      <thead>
+        <tr><th>Hour</th><th>Student Email</th><th>Timestamp</th></tr>
+      </thead>
+      <tbody id="attendance_table">
+        <!-- filled dynamically -->
+      </tbody>
+    </table>
+  </div>
 
 <script>
-    let qrExpiry = 0;
+let qrCount = 0;
+const maxQR = 5;
+let currentTimer = null;
 
-    async function generateQR() {
-        try {
-            let res = await fetch("/generate_qr");
-            let data = await res.json();
+function generateQR() {
+    fetch('/generate_qr')
+        .then(res => res.json())
+        .then(data => {
+            if (data.error) {
+                document.getElementById('countdown').innerText = "Unauthorized";
+                return;
+            }
+            document.getElementById('qr').src = "data:image/png;base64," + data.qr;
+            let countdown = data.expires_in || 10;
+            document.getElementById('countdown').innerText = countdown + "s";
 
-            document.getElementById("qrContainer").innerHTML = 
-                `<img src="data:image/png;base64,${data.qr}" width="200"/>`;
-
-            // Set QR expiry to 10 seconds
-            qrExpiry = 10;  
-
-            // Countdown timer
-            const countdownEl = document.getElementById("qrCountdown");
-            clearInterval(countdownEl.timer);  // clear previous timer
-            countdownEl.timer = setInterval(() => {
-                if (qrExpiry > 0) {
-                    countdownEl.innerText = `Expires in ${qrExpiry}s`;
-                    qrExpiry--;
-                } else {
-                    countdownEl.innerText = "QR Expired. Refreshing...";
-                    clearInterval(countdownEl.timer);
-                    generateQR(); // automatically refresh QR
+            if (currentTimer) clearInterval(currentTimer);
+            currentTimer = setInterval(() => {
+                countdown--;
+                document.getElementById('countdown').innerText = (countdown > 0 ? countdown + "s" : "0s");
+                if (countdown <= 0) {
+                    clearInterval(currentTimer);
+                    qrCount++;
+                    if (qrCount < maxQR) {
+                        // small delay before next generate for smoothness
+                        setTimeout(generateQR, 300);
+                    } else {
+                        document.getElementById('countdown').innerText = "Done";
+                    }
                 }
             }, 1000);
+        }).catch(err => {
+            console.error(err);
+            document.getElementById('countdown').innerText = "Error";
+        });
+}
 
-        } catch (err) {
-            console.error("Error generating QR:", err);
-        }
-    }
-
-    async function loadAttendance() {
-        try {
-            let res = await fetch("/attendance_list");
-            let students = await res.json();
-            let table = "";
-            students.forEach(s => {
-                table += `<tr><td>${s.id}</td><td>${s.name}</td><td>${s.time}</td></tr>`;
+function loadAttendance() {
+    const selectedDate = document.getElementById('attendance_date').value;
+    const dateParam = selectedDate ? selectedDate : '';
+    fetch(`/faculty_attendance?date=${dateParam}`)
+        .then(res => res.json())
+        .then(data => {
+            const tbody = document.getElementById('attendance_table');
+            tbody.innerHTML = "";
+            data.hours.forEach(h => {
+                if (h.students.length === 0) {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `<td>${h.hour}</td><td>-</td><td>-</td>`;
+                    tbody.appendChild(tr);
+                } else {
+                    h.students.forEach(s => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `<td>${h.hour}</td><td>${s.student_id}</td><td>${s.timestamp}</td>`;
+                        tbody.appendChild(tr);
+                    });
+                }
             });
-            document.getElementById("attendanceTable").innerHTML = table;
-        } catch (err) {
-            console.error("Error loading attendance:", err);
-        }
-    }
+        });
+}
 
-    // Initial load
+document.getElementById('forceGen')?.addEventListener('click', () => {
+    qrCount = 0;
+    generateQR();
+});
+document.getElementById('exportCsv')?.addEventListener('click', () => {
+    window.location = '/export_csv';
+});
+
+window.addEventListener('DOMContentLoaded', () => {
+    // default date to today
+    document.getElementById('attendance_date').value = "{{ today }}";
     generateQR();
     loadAttendance();
-
-    // Refresh attendance list every 5 seconds
-    setInterval(loadAttendance, 5000);
+});
 </script>
 </body>
 </html>

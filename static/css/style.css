@@ -1,79 +1,177 @@
-body {
-  font-family: Arial, sans-serif;
-  background: #f4f6f8;
+/* ===== Global Reset ===== */
+* {
   margin: 0;
   padding: 0;
+  box-sizing: border-box;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 
-.login-container, .dashboard-container {
-  max-width: 500px;
-  margin: 60px auto;
-  background: #fff;
+body {
+  background: #f4f7fc;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
   padding: 30px;
-  border-radius: 8px;
-  box-shadow: 0 3px 10px rgba(0,0,0,0.1);
-}
-
-h2 {
-  text-align: center;
-  margin-bottom: 20px;
   color: #333;
 }
 
-.form-group {
-  margin-bottom: 15px;
-}
-
-label {
-  display: block;
-  margin-bottom: 6px;
-  font-weight: bold;
-  color: #444;
-}
-
-input {
+/* ===== Dashboard Card ===== */
+.dashboard-card {
+  background: #fff;
   width: 100%;
-  padding: 10px;
-  border: 1px solid #bbb;
-  border-radius: 5px;
+  max-width: 900px;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.1);
+  animation: fadeIn 0.4s ease-in-out;
 }
 
-.btn {
-  width: 100%;
-  padding: 12px;
-  background: #007bff;
-  border: none;
-  border-radius: 5px;
-  color: white;
-  font-size: 16px;
-  cursor: pointer;
+.dashboard-card h1 {
+  text-align: center;
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 25px;
+  color: #2563eb; /* Blue heading */
+}
+
+/* ===== Section Titles ===== */
+h2 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 20px 0 15px;
+  color: #111;
+  border-left: 4px solid #2563eb;
+  padding-left: 10px;
+}
+
+/* ===== QR Section ===== */
+.qr-box {
+  text-align: center;
+  background: #f9fafc;
+  border: 2px dashed #2563eb;
+  border-radius: 12px;
+  padding: 25px;
+  margin-bottom: 25px;
+  transition: transform 0.2s ease;
+}
+
+.qr-box:hover {
+  transform: scale(1.02);
+}
+
+.qr-box img {
+  width: 200px;
+  height: 200px;
+  margin: 15px 0;
+}
+
+#countdown {
   margin-top: 10px;
+  font-size: 14px;
+  color: #e11d48; /* red warning */
+  font-weight: bold;
 }
 
-.btn:hover {
-  background: #0056b3;
+/* ===== Forms ===== */
+.form-inline {
+  display: flex;
+  gap: 12px;
+  margin: 15px 0 25px;
 }
 
-.google-btn {
-  background: #db4437;
+input[type="text"], input[type="date"] {
+  flex: 1;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  outline: none;
+  font-size: 14px;
 }
 
-.google-btn:hover {
-  background: #a73528;
+input:focus {
+  border-color: #2563eb;
+  box-shadow: 0px 0px 6px rgba(37, 99, 235, 0.3);
 }
 
-.logout {
-  background: #dc3545;
+/* ===== Buttons ===== */
+.btn {
+  padding: 12px 18px;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.logout:hover {
-  background: #a71d2a;
+.btn-primary {
+  background: #2563eb;
+  color: #fff;
 }
 
-.info-box {
-  background: #eef6f9;
-  border: 1px solid #cce4ed;
-  padding: 15px;
+.btn-primary:hover {
+  background: #1e4ecf;
+}
+
+.btn-danger {
+  background: #e11d48;
+  color: #fff;
+}
+
+.btn-danger:hover {
+  background: #be123c;
+}
+
+/* ===== Tables ===== */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+thead {
+  background: #2563eb;
+  color: #fff;
+}
+
+th, td {
+  padding: 14px;
+  text-align: center;
+  border-bottom: 1px solid #eee;
+  font-size: 14px;
+}
+
+tbody tr:hover {
+  background: #f3f6fd;
+}
+
+/* ===== Status Messages ===== */
+#scan_status {
+  margin-top: 15px;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 600;
+  padding: 10px;
   border-radius: 6px;
-  margin-bottom: 20px;
+  display: none;
+}
+
+.success {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.error {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+/* ===== Animation ===== */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }

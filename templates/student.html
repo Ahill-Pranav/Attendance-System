@@ -1,70 +1,129 @@
+<!-- templates/student.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Student Dashboard</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-    <!-- html5-qrcode library -->
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <meta charset="utf-8" />
+  <title>Student Dashboard</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <script src="https://unpkg.com/html5-qrcode"></script>
 </head>
-<body class="bg-light">
-<div class="container py-5">
-    <h2 class="text-primary">Student Dashboard</h2>
-    <p class="text-muted">Scan the QR code to mark your attendance</p>
+<body>
+  <div class="dashboard-card">
+    <h1>Student Dashboard</h1>
 
-    <!-- Attendance Status -->
-    <div class="card shadow-sm p-4 mb-4">
-        <h5>Attendance Status</h5>
-        <p id="attendanceStatus">Not Marked</p>
+    <h2>Scan QR to mark attendance</h2>
+    <div class="qr-box">
+      <div id="qr-reader" style="width:360px; margin:0 auto;"></div>
+      <div id="scan_status" class="" style="display:block; margin-top:10px; text-align:center;">Waiting to scan QR...</div>
     </div>
 
-    <!-- QR Scanner -->
-    <div class="card shadow-sm p-4">
-        <h5>Scan QR</h5>
-        <div id="qr-reader" style="width: 100%;"></div>
-        <p id="qr-result" class="text-success mt-2"></p>
+    <h2>Hourly Attendance</h2>
+    <table>
+      <thead>
+        <tr><th>Hour</th><th>Class ID</th><th>Status</th><th>Timestamp</th><th>Faculty</th></tr>
+      </thead>
+      <tbody id="attendance_table">
+        <tr><td>I Hour</td><td>-</td><td>Absent</td><td>-</td><td>-</td></tr>
+        <tr><td>II Hour</td><td>-</td><td>Absent</td><td>-</td><td>-</td></tr>
+        <tr><td>III Hour</td><td>-</td><td>Absent</td><td>-</td><td>-</td></tr>
+        <tr><td>IV Hour</td><td>-</td><td>Absent</td><td>-</td><td>-</td></tr>
+        <tr><td>V Hour</td><td>-</td><td>Absent</td><td>-</td><td>-</td></tr>
+        <tr><td>VI Hour</td><td>-</td><td>Absent</td><td>-</td><td>-</td></tr>
+        <tr><td>VII Hour</td><td>-</td><td>Absent</td><td>-</td><td>-</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Check Attendance by Date</h2>
+    <div class="form-inline">
+      <input type="date" id="attendance_date" max="{{ today }}">
+      <button onclick="loadAttendance()" class="btn btn-primary">Load Attendance</button>
     </div>
-</div>
+
+  </div>
 
 <script>
-    // Check current attendance status
-    async function checkStatus() {
-        let res = await fetch("/check_attendance");
-        let data = await res.json();
-        document.getElementById("attendanceStatus").innerText = data.status;
-    }
-    setInterval(checkStatus, 5000);
-    checkStatus();
+let html5QrCode = null;
+function startScanner() {
+    const qrRegionId = "qr-reader";
+    html5QrCode = new Html5Qrcode(qrRegionId);
+    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
 
-    // Handle scan success
-    function onScanSuccess(decodedText, decodedResult) {
-        document.getElementById("qr-result").innerText = "QR Scanned! Sending attendance...";
-        
-        fetch("/scan_qr", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ token: decodedText })
-        })
+    html5QrCode.start(
+        { facingMode: "environment" },
+        config,
+        (decodedText, decodedResult) => {
+            // stop scanning to avoid duplicates
+            html5QrCode.stop().catch(()=>{});
+            markAttendance(decodedText);
+        },
+        (error) => {
+            // ignore continuous scan errors
+        }
+    ).catch(err => {
+        document.getElementById('scan_status').className = "error";
+        document.getElementById('scan_status').innerText = "Camera not accessible: " + err;
+    });
+}
+
+function markAttendance(token) {
+    fetch('/scan_qr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: token })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('scan_status').className = "success";
+            document.getElementById('scan_status').innerText = `Attendance marked for ${data.hour} Hour`;
+            // refresh table for today
+            loadAttendance();
+        } else {
+            document.getElementById('scan_status').className = "error";
+            document.getElementById('scan_status').innerText = data.msg || "Invalid QR";
+        }
+        // restart scanner after 1.5s so next scans possible
+        setTimeout(()=> {
+            startScanner();
+            document.getElementById('scan_status').className = "";
+            document.getElementById('scan_status').innerText = "Waiting to scan QR...";
+        }, 1500);
+    })
+    .catch(err => {
+        document.getElementById('scan_status').className = "error";
+        document.getElementById('scan_status').innerText = "Error marking attendance";
+        console.error(err);
+        setTimeout(()=> { startScanner(); }, 1500);
+    });
+}
+
+function loadAttendance() {
+    const selectedDate = document.getElementById('attendance_date').value;
+    const dateParam = selectedDate ? selectedDate : '';
+    fetch(`/student_attendance?date=${dateParam}`)
         .then(res => res.json())
         .then(data => {
-            document.getElementById("qr-result").innerText = data.msg;
-            checkStatus(); // refresh status
+            const tbody = document.getElementById('attendance_table');
+            tbody.innerHTML = "";
+            data.hours.forEach(h => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${h.hour}</td>
+                                <td>${h.class_id}</td>
+                                <td>${h.status}</td>
+                                <td>${h.timestamp}</td>
+                                <td>${h.faculty}</td>`;
+                tbody.appendChild(tr);
+            });
         });
-    }
+}
 
-    function onScanFailure(error) {
-        // Optional: log errors silently
-        // console.warn(error);
-    }
-
-    // Use the higher-level Scanner Widget (better UX)
-    let html5QrcodeScanner = new Html5QrcodeScanner(
-        "qr-reader", 
-        { fps: 10, qrbox: { width: 250, height: 250 } }, 
-        false
-    );
-    html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+// start scanner and load today's attendance on page load
+window.addEventListener('DOMContentLoaded', () => {
+    startScanner();
+    // set date to today by default
+    document.getElementById('attendance_date').value = "{{ today }}";
+    loadAttendance();
+});
 </script>
 </body>
 </html>
